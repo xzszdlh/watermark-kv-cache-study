@@ -1,0 +1,50 @@
+# Credentials and machine-local settings
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*
+secrets*
+
+# Python / environments
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+environment.freeze.txt
+
+# Downloaded assets and experimental outputs
+**/assets/
+**/runs/
+**/audit/
+**/logs/
+**/human_audit/
+*.log
+*.tmp
+*.part
+*.lock
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.arrow
+*.parquet
+*.csv
+*.jsonl
+*.pdf
+
+# Local audit configurations and article-containing items
+/rebuild/ai_audit/*.json
+!/rebuild/ai_audit/*.example.json
+
+# UI / operating-system caches
+node_modules/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "evaluation_type": "independent_blinded_LLM_judge_audit_not_human_annotation",
+  "authorization": "EXAMPLE ONLY: configure endpoints and obtain consent before any API requests.",
+  "dataset_id": "REPLACE_WITH_HASH_OF_YOUR_OWN_FROZEN_ITEMS",
+  "items": 260,
+  "base_extension": "terra_extension.json",
+  "replaces": {
+    "model_alias": "terra",
+    "requested_model": "gpt-6.1-terra",
+    "run_directory": "runs/ai-audit/terra",
+    "reason": "Repeated provider-wide HTTP 429 during synthetic preflight; no formal judgments were produced. Replacement selected by user for API availability, not observed label performance.",
+    "formal_judgments_at_stop": 0,
+    "status": "Stopped; all attempts and manifests remain retained and excluded from the active panel."
+  },
+  "model": {
+    "model_alias": "terra56",
+    "requested_model": "gpt-5.6-terra",
+    "endpoint": "https://example.invalid/v1/responses",
+    "api_dialect": "responses",
+    "execution_location": "server",
+    "api_key_env": "CHEAPROUTER_API_KEY",
+    "concurrency": 10,
+    "minimum_request_interval_seconds": 0,
+    "expected_returned_effort": "medium",
+    "request_overrides": {}
+  },
+  "request": {
+    "reasoning": {
+      "effort": "medium"
+    },
+    "max_output_tokens": 8192,
+    "text": {
+      "format": {
+        "type": "json_object"
+      }
+    },
+    "stream": false
+  },
+  "capability_check": "terra56_capability_checks.json",
+  "preflight_and_retry_policy": "Inherit terra_extension.json preflight and formal retry rules, replacing the requested model and capability-check file only. Check model and echoed medium on every successful response. Never retry a valid answer based on its label, evidence match or reasoning-token count. All synthetic cases are diagnostic only and excluded from formal evidence.",
+  "preserved_inputs": [
+    "protocol.json",
+    "judge.py",
+    "panel_runner.py",
+    "scheduling_amendment.json",
+    "terra_extension.json",
+    "terra_capability_checks.json",
+    "rubric.txt",
+    "items.json"
+  ],
+  "preserved_run_identities": {
+    "qwen": "fae4eeb5912b7cdd4fbac41323516a6da209d462f9633fff2512dc3bf91724c5",
+    "deepseek": "97410bc8425bf5191707353355fc40eaf8de60acc03f0b7878a37a32822ff500"
+  },
+  "active_panel": [
+    "qwen",
+    "deepseek",
+    "terra56"
+  ],
+  "total_planned_formal_judgments": 780,
+  "analysis": "Inherit the three-model analysis in terra_extension.json, replacing terra by terra56. Retain all per-model outputs, the original Qwen/DeepSeek comparison, all three pairwise agreements, unanimity and secondary descriptive majority with all three valid answers. No majority label is ground truth. Keep the two sampling strata separate, NLI threshold 0.5, and the original document bootstrap configuration.",
+  "scientific_scope": "No changes to the 260 blinded inputs, shared rubric, existing Qwen/DeepSeek settings, private-join rules or human annotation blanks. The new model receives no other judge's answers. Preserve model-specific identities and full attempt histories."
+}

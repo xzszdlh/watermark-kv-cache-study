@@ -1,0 +1,9 @@
+{
+  "base": "../protocol.json",
+  "experiment_id": "topk-128",
+  "study_role": "post_initial_run_fixed_decoding_sensitivity",
+  "comparison": "Against original unrestricted sampling: retain top-k=50 after watermark bias; keep scientific settings otherwise fixed.",
+  "generation": {"top_k": 50, "top_p": 1.0, "max_new_tokens": 128, "batch_size": 64, "cpu_threads": 4},
+  "resources": {"physical_gpu": "2", "memory_fraction": 0.25},
+  "freeze_note": "Chosen before observing this supplementary run. All four deltas and all three seeds must be reported. Same 700 original document IDs."
+}

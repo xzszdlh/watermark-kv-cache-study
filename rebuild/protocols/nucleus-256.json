@@ -1,0 +1,9 @@
+{
+  "base": "../protocol.json",
+  "experiment_id": "nucleus-256",
+  "study_role": "post_initial_run_fixed_length_sensitivity",
+  "comparison": "Against nucleus-128 only: raise max_new_tokens from 128 to 256; keep all other scientific decoding settings fixed. This is not a pure length comparison against original unrestricted sampling.",
+  "generation": {"top_k": 0, "top_p": 0.9, "max_new_tokens": 256, "batch_size": 64, "cpu_threads": 4},
+  "resources": {"physical_gpu": "3", "memory_fraction": 0.20},
+  "freeze_note": "Chosen before observing this supplementary run. All four deltas and all three seeds must be reported. Same 700 original document IDs. NLI length limits remain unchanged; any unscored sentences must be reported explicitly."
+}

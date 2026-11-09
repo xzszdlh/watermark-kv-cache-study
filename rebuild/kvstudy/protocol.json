@@ -1,0 +1,19 @@
+{
+  "base": "../protocol.json",
+  "experiment_id": "kv-cache",
+  "study_role": "fixed_post_initial_cache_intervention_ablation",
+  "comparison": "2x2 BART cache ablation: full, source cross-KV half, history self-KV half, both half. Not a HalluKV/HeadKV/H2O/StreamingLLM reproduction.",
+  "generation": {"seeds": [42,43,44], "batch_size": 32, "temperature": 1.0, "top_k": 0, "top_p": 0.9, "max_new_tokens": 128, "cpu_threads": 4},
+  "watermark": {"gamma": 0.25, "deltas": [0.0,2.0]},
+  "resources": {"physical_gpu": "2", "memory_fraction": 0.22, "admission_extra_reserve_MiB": 6144},
+  "cache": {
+    "conditions": ["full","cross-half","self-half","both-half"],
+    "cross_policy": "retain ceil(ratio*valid_source_length) uniformly spaced original encoder positions; project full source once, physically gather K/V, free discarded tensors",
+    "self_policy": "after every decoder step retain decoder-start sink plus most recent positions up to max(1,ceil(ratio*total_positions_seen)); no evicted-token recomputation",
+    "absolute_position_policy": "original decoder input timestep, independent of compacted cache length",
+    "cross_ratios": {"full":1.0,"cross-half":0.5,"self-half":1.0,"both-half":0.5},
+    "self_ratios": {"full":1.0,"cross-half":1.0,"self-half":0.5,"both-half":0.5}
+  },
+  "excluded_claims": ["HalluKV reproduction", "decoder-only attention-head drift mechanism", "equal total memory budgets between cross-half and self-half", "zero-overhead detection", "human-verified factuality", "guaranteed hallucination increase", "standalone latency benchmarking while GPU is shared"],
+  "freeze_note": "Fixed before cache results. Reuse exact original 200 validation and 500 test articles. Four cache conditions x two deltas x three seeds = 16,800 generated summaries. Evaluate support against full model-visible source, not just retained positions."
+}

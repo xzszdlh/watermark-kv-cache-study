@@ -1,0 +1,5 @@
+Implementation reference: https://github.com/jwkirchenbauer/lm-watermarking
+Commit: 82922516930c02f8aa322765defdb5863d07a00e
+File: watermark_processor.py (Apache-2.0 license notice retained in source)
+Paper: Kirchenbauer et al., A Watermark for Large Language Models, https://arxiv.org/abs/2301.10226
+Only WatermarkBase is AST-loaded in the CPU PRF parity test. No fetched file is executed wholesale.

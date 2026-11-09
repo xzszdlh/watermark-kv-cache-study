@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "evaluation_type": "independent_blinded_LLM_judge_audit_not_human_annotation",
+  "authorization": "EXAMPLE ONLY: configure endpoints and obtain consent before any API requests.",
+  "dataset_id": "REPLACE_WITH_HASH_OF_YOUR_OWN_FROZEN_ITEMS",
+  "items": 260,
+  "base_protocol": "protocol.json",
+  "base_protocol_status": "Immutable server-pair protocol; this extension does not edit its requests, manifests, source files, identities or checkpoints.",
+  "addition_timing": "Added at user request while Qwen and DeepSeek were running. Progress inspected before the addition was Qwen 8/260 and DeepSeek 6/260, with request statuses and reasoning telemetry but no formal-label aggregate used to select a model or change the rubric.",
+  "model": {
+    "model_alias": "terra",
+    "requested_model": "gpt-6.1-terra",
+    "endpoint": "https://example.invalid/v1/responses",
+    "api_dialect": "responses",
+    "execution_location": "server",
+    "api_key_env": "CHEAPROUTER_API_KEY",
+    "concurrency": 10,
+    "minimum_request_interval_seconds": 0,
+    "expected_returned_effort": "medium",
+    "request_overrides": {}
+  },
+  "request": {
+    "reasoning": {
+      "effort": "medium"
+    },
+    "max_output_tokens": 8192,
+    "text": {
+      "format": {
+        "type": "json_object"
+      }
+    },
+    "stream": false
+  },
+  "sampling_note": "No temperature is sent to the Responses reasoning endpoint. Qwen and DeepSeek retain their existing temperature=0 settings. Equal requested mid-tier effort is not equal verified internal compute or identical decoding across vendors.",
+  "scheduling_authorization": "EXAMPLE ONLY: configure endpoints and obtain consent before any API requests.",
+  "capability_check": "terra_capability_checks.json",
+  "synthetic_preflight": "Use the same four synthetic cases and unchanged rubric. All four must return valid schemas, requested-model identity, verbatim-quote gate and echoed reasoning.effort=medium. Positive thinking-token metadata is required in the separate preflight capability check and recorded per item; do not require every trivial case to consume positive reasoning tokens and do not retry a schema-valid answer to increase thinking. Semantic matches are diagnostic and not a selection gate, consistent with the revised server-pair policy. Preserve failures and disagreements.",
+  "formal_policy": "Run all 260 items with a fresh context per request; do not reuse earlier Terra attempts from the discarded three-model plans. Retain the first schema-valid answer and preserve quote flags without semantic retries. Inherit the fixed retry/timeouts and evidence rubric from protocol.json. Require returned model and medium effort on every successful response; no automatic model or non-thinking fallback.",
+  "panel": {
+    "active_models": [
+      "qwen",
+      "deepseek",
+      "terra"
+    ],
+    "total_planned_formal_judgments": 780,
+    "preserved_run_identities": {
+      "qwen": "fae4eeb5912b7cdd4fbac41323516a6da209d462f9633fff2512dc3bf91724c5",
+      "deepseek": "97410bc8425bf5191707353355fc40eaf8de60acc03f0b7878a37a32822ff500"
+    },
+    "preserve_original_pair": "Retain the previously specified Qwen/DeepSeek agreement and disagreement analyses unchanged. Terra is an additional independent-context judge, not a replacement or adjudicator.",
+    "reports": [
+      "per_model_labels_evidence_NLI_and_cache_descriptives",
+      "all_three_pairwise_agreements_and_Cohen_kappa",
+      "three_way_unanimity_and_coverage",
+      "all_disagreements_with_evidence",
+      "API_missingness_usage_and_reasoning_metadata"
+    ],
+    "secondary_majority": "Descriptive only, conditional on all three schema-valid responses. Two matching labels define a majority; three different labels remain no_consensus. Missing outputs remain missing. Preserve all individual verdicts and also report quote-valid subsets. No majority label is factual ground truth or human validation.",
+    "sampling_strata": [
+      "initial_fixed_audit",
+      "paired_cache_audit"
+    ],
+    "binary_mapping": {
+      "supported": 1,
+      "contradicted": 0,
+      "not_in_source": 0,
+      "unclear": null
+    },
+    "NLI_threshold": 0.5,
+    "bootstrap_unit": "document, preserving matched conditions and same-document repeated items; never pool the two audit strata",
+    "bootstrap_replicates": 5000,
+    "bootstrap_seed": 202611051,
+    "multiplicity": "Descriptive/exploratory only; no new confirmatory significance claim",
+    "private_join": "Join the private sampling key only after final outputs are frozen; never send it to any judge."
+  },
+  "limits": [
+    "AI assessments are additional automated evidence, not human verification.",
+    "Separate requests do not establish independent model errors.",
+    "The proxy-reported model alias, effort and token counts do not independently verify underlying weights or unmodified routing.",
+    "Qwen requests medium; DeepSeek uses the accepted 1-100 midpoint 50; Terra requests medium through Responses. Actual compute is not matched.",
+    "The paired-cache audit covers 20 documents and seed42, not all test documents or supplemental conditions."
+  ]
+}

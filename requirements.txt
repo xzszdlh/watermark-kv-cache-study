@@ -1,0 +1,13 @@
+# Original environment: Python 3.10, PyTorch 2.5.1 (CUDA 12.4).
+# Install the appropriate PyTorch build for your machine separately.
+transformers==4.44.2
+tokenizers==0.19.1
+huggingface-hub==0.36.0
+datasets==3.6.0
+sentencepiece==0.2.0
+rouge-score==0.1.2
+protobuf<5
+numpy
+scipy
+requests
+nltk

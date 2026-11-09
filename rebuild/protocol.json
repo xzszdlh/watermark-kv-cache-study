@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "question": "Does local watermark strength predict source support after accounting for entropy, length and position? Direction is not prespecified.",
+  "model": {"repo": "facebook/bart-large-cnn", "revision": "37f520fa929c961707657b28798b30c003dd100b", "directory": "assets/bart-large-cnn", "files": ["config.json", "generation_config.json", "model.safetensors", "merges.txt", "vocab.json", "tokenizer.json"]},
+  "nli": {"repo": "cross-encoder/nli-deberta-v3-base", "revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7", "directory": "assets/nli-deberta-v3-base", "files": ["config.json", "model.safetensors", "spm.model", "tokenizer.json", "tokenizer_config.json", "special_tokens_map.json", "added_tokens.json"]},
+  "dataset": {"repo": "abisee/cnn_dailymail", "revision": "96df5e686bee6baa90b8bee7c28b81fa3fa6223d", "config": "3.0.0", "calibration_split": "validation", "calibration_n": 200, "test_n": 500, "selection_seed": 20261104},
+  "generation": {"seeds": [42, 43, 44], "batch_size": 32, "max_source_tokens": 1024, "max_new_tokens": 128, "min_content_tokens": 24, "temperature": 1.0, "top_k": 0, "top_p": 1.0, "dtype": "float16", "cpu_threads": 4},
+  "watermark": {"scheme": "simple_1", "prf_device": "cpu", "hash_key": 15485863, "wrong_key": 32452843, "gamma": 0.25, "deltas": [0.0, 1.0, 2.0, 4.0], "ignore_repeated_bigrams": true},
+  "evaluation": {"nli_batch_size": 64, "premise_chunk_tokens": 256, "premise_stride": 192, "max_hypothesis_tokens": 192, "min_segment_unique_bigrams": 10, "bootstrap_replicates": 1000, "fpr_target": 0.01, "human_audit_n": 100},
+  "excluded_claims": ["KV compression", "causal hallucination detection", "zero-cost detection", "human-verified factuality", "guaranteed positive correlation or detection rate"]
+}

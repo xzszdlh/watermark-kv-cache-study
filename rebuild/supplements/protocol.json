@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "study_role": "post_observation_sensitivity_extension_fixed_before_new_measurements",
+  "scope": "BART-large-CNN / same 200 calibration and 500 test documents; no independent confirmation dataset",
+  "reference_protocol": "kvstudy/protocol.json",
+  "seeds": [42, 43, 44],
+  "deltas": [0.0, 2.0],
+  "batch_size": 32,
+  "new_configurations": 16,
+  "new_generation_records": 67200,
+  "selection_seed": 202611041,
+  "random_source_policy": "Keep both endpoints and uniformly sample remaining original source positions without replacement using a fixed document-specific CPU RNG; sorted positions; the selection is shared across delta and generation seed. One fixed random policy draw, not a multi-policy average.",
+  "groups": [
+    {"name": "retention", "question": "Are observed changes sensitive to the retention ratio?", "generation": {}, "cases": [
+      {"name": "cross75", "cross": 0.75, "self": 1.0},
+      {"name": "self75", "cross": 1.0, "self": 0.75},
+      {"name": "both75", "cross": 0.75, "self": 0.75},
+      {"name": "cross25", "cross": 0.25, "self": 1.0},
+      {"name": "self25", "cross": 1.0, "self": 0.25},
+      {"name": "both25", "cross": 0.25, "self": 0.25}
+    ], "reference": "runs/kv-cache/full/formal"},
+    {"name": "nucleus256", "question": "Do cache effects persist when the decoder length ceiling is raised?", "generation": {"max_new_tokens": 256}, "cases": [
+      {"name": "full", "cross": 1.0, "self": 1.0},
+      {"name": "cross50", "cross": 0.5, "self": 1.0},
+      {"name": "self50", "cross": 1.0, "self": 0.5},
+      {"name": "both50", "cross": 0.5, "self": 0.5}
+    ], "reference": "within_group_full"},
+    {"name": "topk50", "question": "Do cache effects persist under a second sampling rule?", "generation": {"top_k": 50, "top_p": 1.0}, "cases": [
+      {"name": "full", "cross": 1.0, "self": 1.0},
+      {"name": "cross50", "cross": 0.5, "self": 1.0},
+      {"name": "self50", "cross": 1.0, "self": 0.5},
+      {"name": "both50", "cross": 0.5, "self": 0.5}
+    ], "reference": "within_group_full"},
+    {"name": "random50", "question": "Are source-cache effects specific to uniform-spaced position selection?", "generation": {}, "cases": [
+      {"name": "cross50", "cross": 0.5, "self": 1.0, "cross_selection": "random_endpoints"},
+      {"name": "both50", "cross": 0.5, "self": 0.5, "cross_selection": "random_endpoints"}
+    ], "reference": "runs/kv-cache/full/formal", "additional_references": ["runs/kv-cache/cross-half/formal", "runs/kv-cache/both-half/formal"]}
+  ],
+  "paired_analysis": {
+    "input": "runs/kv-cache/<condition>/formal",
+    "contrasts": ["cross-full", "self-full", "both-full", "cross-self", "both-cross-self+full"],
+    "metrics": ["support_proxy", "rougeL", "displayed_text_z", "content_tokens", "detected_at_common_full_threshold", "length_cap", "mean_base_entropy"],
+    "primary_posthoc_family": "cross-self and interaction x deltas 0/2 x support_proxy, rougeL, displayed_text_z, content_tokens = 16 intervals",
+    "bootstrap_replicates": 20000,
+    "bootstrap_seed": 202611042,
+    "aggregation": "average the three matched seed differences within each document, then resample whole documents; also report each seed",
+    "intervals": "pointwise 95% percentile bootstrap, plus Bonferroni nominal familywise 95% intervals for the 16 declared posthoc comparisons",
+    "null_caution": "An interval spanning zero does not establish no effect, equivalence or exact additivity. No equivalence margin is defined."
+  },
+  "human_audit": {
+    "original_rows": 100,
+    "original_input": "runs/formal/human_audit_blinded.csv",
+    "kv_documents": 20,
+    "kv_seed": 42,
+    "kv_conditions": ["full", "cross-half", "self-half", "both-half"],
+    "kv_deltas": [0.0, 2.0],
+    "kv_sentences_per_document_condition_delta": 1,
+    "kv_rows": 160,
+    "selection_seed": 202611043,
+    "display_shuffle_seed": 202611044,
+    "labels": ["supported", "contradicted", "not_in_source", "unclear"],
+    "blinding": "Hide condition, delta, seed, NLI, watermark and expected outcome from annotation materials. Annotator may already know study-level findings; disclose this.",
+    "legacy_mapping": "not_in_source maps to unclear only for a legacy ternary export; retain the four-way original human label",
+    "sampling": "Freeze 20 random test document IDs, sample one sentence from every matched summary without inspecting scores, randomize display order. Original 100 sentence selections unchanged.",
+    "audit_scope": "Small proxy-validity audit, not a precise population hallucination-rate benchmark. Same document/seed repetitions are not independent. No LLM labels counted as human."
+  },
+  "resource_policy": {"allocator_fraction": 0.16, "context_allowance_MiB_per_worker": 1024, "free_reserve_MiB": 6144, "maximum_workers": {"0": 3, "1": 4, "2": 3, "3": 1}},
+  "reporting": "Report all fixed conditions including null or reversed results; no selection of best seed. Raw checkpoints and original protocols remain immutable. Changes after freeze require a separate explicit amendment."
+}

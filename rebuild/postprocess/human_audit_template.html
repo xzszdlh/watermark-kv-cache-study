@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>摘要句子人工核验</title>
+<style>
+:root{font-family:"Microsoft YaHei",system-ui,sans-serif;color:#172b3a;background:#f2f5f8;font-size:16px}*{box-sizing:border-box}body{margin:0}header{padding:16px 24px;background:#fff;border-bottom:1px solid #d6e0e8;position:sticky;top:0;z-index:2}h1{font-size:22px;margin:0 0 10px}button,select,input,textarea{font:inherit}button{padding:8px 12px;border:1px solid #acbccb;border-radius:6px;background:#fff;cursor:pointer}button.primary{background:#215c88;color:white;border-color:#215c88}button:disabled{opacity:.5;cursor:default}.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.bar input{width:145px;padding:7px;border:1px solid #acbccb;border-radius:5px}.bar input[type=number]{width:80px}.status{margin-left:auto;font-size:14px}main{padding:20px 24px;max-width:1600px;margin:auto}.panels{display:grid;grid-template-columns:1.1fr 1fr;gap:20px}.panel{background:white;border:1px solid #d6e0e8;border-radius:8px;padding:20px}h2{font-size:17px;margin:0 0 14px}.source{white-space:pre-wrap;line-height:1.8;max-height:68vh;overflow:auto;font-family:Georgia,"Times New Roman",serif;font-size:18px}.target{font:20px/1.65 Georgia,"Times New Roman",serif;background:#edf4f9;padding:14px;border-left:4px solid #215c88;white-space:pre-wrap}.context{font:16px/1.65 Georgia,serif;white-space:pre-wrap}.choices{margin:18px 0}.choice{display:block;padding:9px;border:1px solid #dce4ec;border-radius:5px;margin:7px 0;cursor:pointer}.choice:has(input:checked){background:#e8f1f8;border-color:#215c88}.choice small{display:block;color:#526675;margin-left:26px}.choice input{margin-right:8px}textarea{width:100%;min-height:75px;padding:9px;border:1px solid #acbccb;border-radius:5px;line-height:1.5;resize:vertical}label.field{display:block;margin:13px 0 6px}details{margin:12px 0}summary{cursor:pointer;color:#244f70}.help{line-height:1.75;background:#fff;padding:16px 20px;border-radius:7px;margin-bottom:18px}.notice{color:#655012;font-size:14px;line-height:1.6;margin:10px 0}.warning{color:#a32b20}.save{font-size:13px;color:#536978;min-height:21px;margin-top:6px}@media(max-width:850px){.panels{grid-template-columns:1fr}.source{max-height:45vh}header{position:static;padding:15px}main{padding:12px}.status{margin-left:0}}.guide-table{border-collapse:collapse;width:100%}.guide-table td,.guide-table th{border:1px solid #ccd6e0;padding:8px;text-align:left}
+</style></head><body>
+<header><h1>摘要句子人工核验</h1><div class="bar">
+<label>标注人 <input id="annotator" placeholder="姓名或固定代号"></label><button id="previous">上一条</button><button id="next">下一条</button><button id="unanswered">下一条未完成</button>
+<label>跳到 <input id="jump" type="number" min="1" value="1"></label><button id="jumpButton">跳转</button>
+<button class="primary" id="export">导出结果 JSON</button><button id="exportCsv">导出 CSV</button><button id="import">导入继续</button><input id="fileInput" type="file" accept=".json,application/json" hidden>
+<span class="status" id="progress"></span></div><div class="save" id="saveStatus"></div></header>
+<main><details class="help" open><summary>填写说明（第一次请展开阅读）</summary>
+<p>只判断右侧抽到的这一个句子能否从左侧原文得到支持。无需判断文笔、信息是否全面，也不用知道模型是哪一组。左侧是生成模型实际看到的原文，可能是新闻的一部分；不要上网补充事实。右侧整份摘要只用于理解代词，不能当作事实证据。</p>
+<table class="guide-table"><tr><th>标签</th><th>何时选择</th></tr><tr><td>有原文支持</td><td>句子的主要事实及具体限定都有原文依据。允许同义改写和原文明确支持的简单推断。</td></tr><tr><td>与原文矛盾</td><td>至少一项明确事实与原文冲突，例如人名、人数、地点、时间、否定或因果说反。优先于“原文没有”。</td></tr><tr><td>原文没有依据</td><td>句子意思清楚，原文却没有支撑其中某项事实。没有依据不等于已经证明现实中为假。</td></tr><tr><td>无法判断</td><td>句子残缺、指代不明、原文本身模糊，或阅读后仍不能可靠判断。请说明哪里卡住。</td></tr></table>
+<p>为“有原文支持”或“与原文矛盾”粘贴原文证据；为“原文没有依据”写出缺依据的具体片段；为“无法判断”写明原因。一句包含多个事实时，只有全部主要事实有依据才选“有原文支持”。遗漏了其他新闻内容不算错误。</p>
+<p>人工练习例子（非实验样本）：原文写“周一，三名登山者获救”。“三名登山者在周一获救”选有原文支持；“五名登山者获救”选与原文矛盾；“登山者由军方直升机救出”选原文没有依据。</p>
+<p class="notice">每次填写自动保存在当前浏览器；文件模式或隐私浏览可能不支持保存。请每完成 20 条点一次“导出结果 JSON”，它才是可携带的备份。下次可以导入继续。共 260 条，允许分次完成；所有条目一视同仁，不按“想看到的结果”选择。</p>
+</details><div class="panels"><section class="panel"><h2>原文：模型实际可见的内容</h2><div id="source" class="source"></div></section>
+<section class="panel"><h2 id="itemTitle"></h2><div id="target" class="target"></div><details><summary>查看该句所在的整份摘要（只用于理解指代）</summary><div id="context" class="context"></div></details>
+<div class="choices">
+<label class="choice"><input type="radio" name="label" value="supported">有原文支持<small>关键事实都有依据</small></label>
+<label class="choice"><input type="radio" name="label" value="contradicted">与原文矛盾<small>至少一项事实明确冲突</small></label>
+<label class="choice"><input type="radio" name="label" value="not_in_source">原文没有依据<small>有明确陈述，但原文未提供相应信息</small></label>
+<label class="choice"><input type="radio" name="label" value="unclear">无法判断<small>残缺、歧义或其他阅读障碍</small></label>
+</div>
+<label class="field" for="evidence">原文证据（直接粘贴英文原句，可多段）</label><textarea id="evidence" placeholder="支持或矛盾判断请附原文；没有证据时不要编造引文。"></textarea>
+<label class="field" for="notes">备注：冲突、缺少依据的片段，或不确定的原因</label><textarea id="notes" placeholder="例如：摘要称 five，原文写 three；或原文没有提到 helicopter。"></textarea>
+<label class="field" for="assistance">这条是否使用辅助工具</label><select id="assistance"><option value="none">未使用</option><option value="dictionary">只查词典</option><option value="translation">用了翻译工具，仍对照英文判断</option><option value="other">其他（请在备注注明）</option></select>
+<p class="notice">最终标签由真人独立判断。不要把题目交给 AI 问“该选哪一类”。需要词义解释可以查词典；若使用翻译，请如实记录，尤其核对数字、实体和否定。</p><div id="validation" class="notice"></div></section></div></main>
+<script id="audit-data" type="application/json">__AUDIT_DATA__</script>
+<script>
+'use strict';
+const data=JSON.parse(document.getElementById('audit-data').textContent),items=data.items;
+const labels=['supported','contradicted','not_in_source','unclear'];
+const storageKey='watermark-human-audit-'+data.dataset_id;
+let state={dataset_id:data.dataset_id,index:0,annotator:'',answers:{}},storageOK=true;
+const byId=id=>document.getElementById(id);
+try{const saved=localStorage.getItem(storageKey);if(saved){const x=JSON.parse(saved);if(x.dataset_id===data.dataset_id)state=x;}}catch(e){storageOK=false;}
+function answer(item){return state.answers[item.item_id]||{};}
+function complete(item){const a=answer(item);if(!labels.includes(a.label)||!(a.annotator||'').trim())return false;if(['supported','contradicted'].includes(a.label))return Boolean((a.evidence_quote||'').trim());return Boolean((a.notes||'').trim());}
+function persist(){try{localStorage.setItem(storageKey,JSON.stringify(state));storageOK=true;}catch(e){storageOK=false;}byId('saveStatus').textContent=storageOK?'已保存至本机浏览器。请定期导出 JSON 备份。':'浏览器无法本地保存，请立即导出 JSON 备份。';byId('saveStatus').className='save'+(storageOK?'':' warning');}
+function counters(){const done=items.filter(complete).length;byId('progress').textContent=`完整 ${done} / ${items.length}，当前 ${state.index+1}`;byId('validation').textContent=complete(items[state.index])?'这条填写完整。':'填写标签和标注人；支持/矛盾需原文证据，没有依据/无法判断需备注。';}
+function save(){const item=items[state.index],selected=document.querySelector('input[name=label]:checked');state.annotator=byId('annotator').value.trim();state.answers[item.item_id]={item_id:item.item_id,label:selected?selected.value:'',evidence_quote:byId('evidence').value,notes:byId('notes').value,annotator:state.annotator,assistance:byId('assistance').value,updated_at:new Date().toISOString()};persist();counters();}
+function render(){state.index=Math.max(0,Math.min(items.length-1,state.index));const item=items[state.index],a=answer(item);byId('source').textContent=item.source_visible_to_model;byId('target').textContent=item.summary_sentence;byId('context').textContent=item.summary_context;byId('itemTitle').textContent=`待核验句子 ${item.item_id}`;byId('annotator').value=state.annotator||a.annotator||'';for(const r of document.querySelectorAll('input[name=label]'))r.checked=r.value===a.label;byId('evidence').value=a.evidence_quote||'';byId('notes').value=a.notes||'';byId('assistance').value=a.assistance||'none';byId('jump').value=state.index+1;byId('jump').max=items.length;byId('previous').disabled=state.index===0;byId('next').disabled=state.index===items.length-1;byId('source').scrollTop=0;counters();persist();}
+function move(i){save();state.index=i;render();}
+byId('previous').onclick=()=>move(state.index-1);byId('next').onclick=()=>move(state.index+1);byId('jumpButton').onclick=()=>move(Number(byId('jump').value)-1);
+byId('unanswered').onclick=()=>{save();for(let j=1;j<=items.length;j++){const n=(state.index+j)%items.length;if(!complete(items[n])){state.index=n;render();return;}}alert('所有条目已填写完整，请导出 JSON。');};
+for(const id of ['annotator','evidence','notes'])byId(id).addEventListener('input',save);byId('assistance').addEventListener('change',save);for(const r of document.querySelectorAll('input[name=label]'))r.addEventListener('change',save);
+function download(text,type,filename){const url=URL.createObjectURL(new Blob([text],{type}));const a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
+function exportResult(){save();const payload={schema:1,dataset_id:data.dataset_id,exported_at:new Date().toISOString(),annotator:state.annotator,index:state.index,answers:state.answers,items:items.map(i=>({...i,...answer(i)}))};download(JSON.stringify(payload,null,2),'application/json;charset=utf-8','人工核验结果_'+(state.annotator||'未署名')+'.json');}
+byId('export').onclick=exportResult;
+byId('exportCsv').onclick=()=>{save();const keys=['item_id','label','evidence_quote','notes','annotator','assistance','updated_at'];const cell=v=>'"'+String(v??'').replaceAll('"','""')+'"';const rows=[keys,...items.map(i=>keys.map(k=>({...i,...answer(i)})[k]||''))];download('\ufeff'+rows.map(r=>r.map(cell).join(',')).join('\r\n'),'text/csv;charset=utf-8','人工核验结果.csv');};
+byId('import').onclick=()=>byId('fileInput').click();byId('fileInput').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const x=JSON.parse(await file.text());if(x.dataset_id!==data.dataset_id)throw Error('这不是同一批标注材料');if(!x.answers||typeof x.answers!=='object')throw Error('缺少答案字段');const valid=new Set(items.map(i=>i.item_id));for(const [k,a] of Object.entries(x.answers)){if(!valid.has(k)||!a||typeof a!=='object'||(a.label&&!labels.includes(a.label)))throw Error('答案格式错误');}if(!confirm('导入将使用文件中的答案替换当前页面进度。已导出当前进度吗？'))return;state={dataset_id:data.dataset_id,index:Math.max(0,Math.min(items.length-1,Number(x.index)||0)),annotator:x.annotator||'',answers:x.answers};render();}catch(err){alert('导入失败：'+err.message);}finally{e.target.value='';}};
+render();
+</script></body></html>

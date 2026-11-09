@@ -1,0 +1,139 @@
+{
+  "schema": 3,
+  "evaluation_type": "independent_blinded_LLM_judge_audit_not_human_annotation",
+  "authorization": "EXAMPLE ONLY: configure endpoints and obtain consent before any API requests.",
+  "reasoning_amendment": "Earlier effort-unspecified runs and the superseded three-model medium run are archived under audit/ai-reasoning-unspecified and audit/ai-three-model-medium. No GPT formal judgment enters this two-model analysis. Both server models start all 260 formal items from scratch. Qwen uses reasoning_effort=medium and enable_thinking=true. The DeepSeek endpoint rejects medium and permits low/high/xhigh/max or a 1-100 integer; use the numeric midpoint 50 in chat_template_kwargs, explicitly enable thinking, and report this as an operational medium-tier mapping rather than a native medium option or equal compute budget.",
+  "dataset_id": "REPLACE_WITH_HASH_OF_YOUR_OWN_FROZEN_ITEMS",
+  "items": 260,
+  "models": {
+    "qwen": {
+      "requested_model": "Qwen3.8-27B",
+      "endpoint": "https://example.invalid/v1/chat/completions",
+      "api_dialect": "chat_completions",
+      "execution_location": "server",
+      "api_key_env": "TOKENHUB_API_KEY",
+      "concurrency": 1,
+      "minimum_request_interval_seconds": 6,
+      "expected_returned_effort": "medium",
+      "request_overrides": {
+        "reasoning_effort": "medium",
+        "chat_template_kwargs": {
+          "enable_thinking": true
+        }
+      },
+      "reuse_preflight": null
+    },
+    "deepseek": {
+      "requested_model": "DeepSeek-V4.1-Flash",
+      "endpoint": "https://example.invalid/v1/chat/completions",
+      "api_dialect": "chat_completions",
+      "execution_location": "server",
+      "api_key_env": "TOKENHUB_API_KEY",
+      "concurrency": 1,
+      "minimum_request_interval_seconds": 6,
+      "expected_returned_effort": 50,
+      "request_overrides": {
+        "thinking": {
+          "type": "enabled"
+        },
+        "chat_template_kwargs": {
+          "enable_thinking": true,
+          "reasoning_effort": 50
+        }
+      }
+    }
+  },
+  "request": {
+    "max_tokens": 8192,
+    "temperature": 0,
+    "stream": false,
+    "response_format": {
+      "type": "json_object"
+    }
+  },
+  "requested_effort_tier": "medium",
+  "api_mapping": "Both models use Chat Completions, temperature=0, max_tokens=8192 and JSON-object output. Qwen: top-level reasoning_effort=medium and chat_template_kwargs.enable_thinking=true. DeepSeek: chat_template_kwargs.reasoning_effort=50 and enable_thinking=true plus thinking.type=enabled; omit unsupported top-level medium. No equal actual reasoning-token budget is assumed.",
+  "reasoning_observability": "Record requested controls, returned reasoning-token counts and reasoning-field lengths, never hidden reasoning text. Require positive reasoning telemetry in the synthetic preflight. Missing per-item telemetry is unknown, not zero reasoning. Report zero/positive/missing reasoning usage separately; do not retry a schema-valid verdict to obtain more thinking tokens.",
+  "http": {
+    "connect_timeout_seconds": 20,
+    "read_timeout_seconds": 240,
+    "TLS_verify": true,
+    "follow_redirects": false,
+    "max_attempts_per_item": 6,
+    "retry_backoff_seconds": [
+      15,
+      30,
+      60,
+      90,
+      120
+    ],
+    "retriable_status_codes": [
+      408,
+      429,
+      500,
+      502,
+      503,
+      504
+    ],
+    "fatal_status_codes": [
+      401,
+      403,
+      404
+    ]
+  },
+  "output_labels": [
+    "supported",
+    "contradicted",
+    "not_in_source",
+    "unclear"
+  ],
+  "blinding": "Each request has a fresh context with identical rubric and only item ID, model-visible source, target sentence and full summary for coreference. No cache condition, delta, seed, NLI score, watermark score, hypothesis, expected direction, other model answer or previous item is included.",
+  "evidence_validation": "Preserve the first schema-valid answer. Check source evidence_quotes by exact substring after whitespace normalization. Supported/contradicted require at least one matching quote to pass the evidence gate; all supplied quotes must match. Do not retry semantic disagreement or quote mismatch. Report raw labels and a quote-valid sensitivity subset separately. Matching a quote does not establish that it logically supports the label.",
+  "retry_policy": "Retry only network/HTTP transient failures, truncated responses or invalid JSON/schema, using the identical blinded prompt. Persist every attempt. Never select a response by outcome, confidence or agreement. Invalid exhausted requests remain missing and never become unclear labels.",
+  "synthetic_preflight": "Four source-support examples, one per expected label, excluded from study evidence. Engineering gate requires valid schema, requested model identity, quote gate and positive reasoning telemetry for all four; semantic agreement is diagnostic, not a model-selection gate. This correction is declared after the old Qwen P3 semantically disagreed: it called a military-helicopter claim contradicted rather than not_in_source. Preserve that exact response without retry. Reuse all four previous medium-Qwen synthetic responses only after verifying unchanged request hashes, label schema and quote checks. DeepSeek receives the same four cases. Record every semantic mismatch and use the unchanged shared rubric for all formal items.",
+  "analysis": {
+    "sampling_strata": [
+      "initial_fixed_audit",
+      "paired_cache_audit"
+    ],
+    "reports": [
+      "per_model_label_counts",
+      "per_model_NLI_agreement",
+      "per_model_cache_condition_descriptives",
+      "pairwise_exact_agreement_and_Cohen_kappa",
+      "two_model_consensus_coverage",
+      "disagreement_items_with_evidence",
+      "API_failures_usage_reasoning_and_quote_flags"
+    ],
+    "consensus": "No majority vote with two judges. Report each model separately. An item has a shared descriptive label only when both schema-valid labels match; any mismatch stays disagreement, and missing responses stay missing. Also report quote-valid agreement coverage. Shared labels are not verified factual ground truth.",
+    "binary_mapping": {
+      "supported": 1,
+      "contradicted": 0,
+      "not_in_source": 0,
+      "unclear": null
+    },
+    "NLI_threshold": 0.5,
+    "NLI_metrics": "Agreement and discrimination relative to AI labels, not accuracy against ground truth. Report AUROC and a fixed-0.5 confusion table, without tuning a threshold on these labels.",
+    "cache_contrasts": [
+      "cross-half minus full",
+      "self-half minus full",
+      "both-half minus full",
+      "cross-half minus self-half"
+    ],
+    "bootstrap_unit": "document; preserve matched conditions and same-document repeated items; no pooling of the two audit sampling strata",
+    "bootstrap_replicates": 5000,
+    "bootstrap_seed": 202611051,
+    "multiplicity": "Small audit comparisons are descriptive/exploratory; no new confirmatory significance claim.",
+    "private_join": "Use the local/server private selection key only after judge outputs are frozen. Do not send it to either endpoint."
+  },
+  "limits": [
+    "AI judging is additional automated evidence, not human validation or factual ground truth.",
+    "Separate calls prevent answer sharing but do not imply statistically independent model errors.",
+    "Requested and returned model aliases do not independently verify underlying weights or deployment identity.",
+    "The proxy may inject undisclosed context or transform requests; retain returned model names and token usage, not a claim of native-provider equivalence.",
+    "Both models explicitly enable thinking. Qwen requests medium; DeepSeek uses the accepted numeric midpoint 50 because its API rejects medium. This is a requested mid-tier mapping, not equal verified compute or a claim that DeepSeek natively supports a medium label.",
+    "The original audit and paired-cache audit have different sampling schemes and are reported separately.",
+    "The paired-cache audit covers 20 documents and seed42, not all 500 test documents or supplementary retention/decoding conditions.",
+    "Model confidence is not calibrated evidence and will not determine vote weights."
+  ]
+}

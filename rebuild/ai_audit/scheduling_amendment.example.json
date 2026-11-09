@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "purpose": "Operational scheduling only; retain frozen scientific requests and completed judgments",
+  "authorization": "EXAMPLE ONLY: configure endpoints and obtain consent before any API requests.",
+  "workers": {
+    "qwen": 10,
+    "deepseek": 10,
+    "terra": 10
+  },
+  "tokenhub_rate_limit": {
+    "shared_models": [
+      "qwen",
+      "deepseek"
+    ],
+    "maximum_starts_per_window": 3,
+    "window_seconds": 1.0,
+    "minimum_start_spacing_seconds": 0.34,
+    "state_path": "runs/ai-audit/scheduling/tokenhub_rate_state.json",
+    "includes_retries_and_preflight": true,
+    "scope": "Both audit jobs jointly, conservatively treating the supplied API credential as one quota; unrelated tasks cannot be controlled by this limiter."
+  },
+  "terra": {
+    "maximum_concurrent_requests": 10,
+    "extra_requests_per_second_limit": null
+  },
+  "retry_policy": "Preserve protocol.json retry budget and backoffs. For 429/503, share an additional provider-wide cooldown of 15 seconds. Apply the same start-rate limiter to retries. Never change the prompt, model, reasoning controls or token budget.",
+  "resume_policy": "Stop only verified old audit worker PIDs. Preserve and hash all existing attempt/record files before resuming. Save prior execution and status metadata separately. An interrupted in-flight call with no persisted answer is a transport interruption, not a discarded judgment. Existing schema-valid answers are never re-requested.",
+  "provenance": "Keep Qwen and DeepSeek scientific identities unchanged. Freeze the wrapper and this scheduling specification in a separate operational manifest. Attach operational identity to new attempts and execution metadata; keep old attempts byte-for-byte. Terra receives a new extension identity.",
+  "models_unchanged": {
+    "qwen": {
+      "model": "Qwen3.8-27B",
+      "thinking": true,
+      "reasoning_effort": "medium"
+    },
+    "deepseek": {
+      "model": "DeepSeek-V4.1-Flash",
+      "thinking": true,
+      "reasoning_effort_numeric": 50
+    },
+    "terra": {
+      "model": "gpt-6.1-terra",
+      "thinking": true,
+      "reasoning_effort": "medium"
+    }
+  },
+  "pre_resume_tests": [
+    "All Qwen/DeepSeek formal request hashes match the unchanged base runner",
+    "Simultaneous TokenHub admissions never exceed three starts in a rolling second",
+    "Existing record and attempt files retain their hashes",
+    "Terra Responses parser records medium effort and token metadata but never hidden reasoning text"
+  ]
+}

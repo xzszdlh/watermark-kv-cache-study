@@ -1,0 +1,26 @@
+{
+  "role": "post_observation_analysis_specification_for_fixed_supplement_suite",
+  "timing": "Written while supplement generation is running, before inspecting supplement aggregate outcomes. Original KV findings were known.",
+  "source_plan": "supplements/protocol.json",
+  "groups": ["retention75", "retention25", "nucleus256", "topk50", "random50"],
+  "contrast_definitions": {
+    "cross-full": {"cross": 1, "full": -1},
+    "self-full": {"self": 1, "full": -1},
+    "both-full": {"both": 1, "full": -1},
+    "cross-self": {"cross": 1, "self": -1},
+    "interaction": {"both": 1, "cross": -1, "self": -1, "full": 1}
+  },
+  "metrics": ["support_proxy", "rougeL", "displayed_text_z", "content_tokens", "detected_at_common_full_threshold", "length_cap", "mean_base_entropy"],
+  "primary_posthoc_family": "5 groups x 2 contrasts (cross-self, interaction) x 2 deltas x 4 metrics (support_proxy, rougeL, displayed_text_z, content_tokens) = 80 intervals",
+  "global_family_size": 80,
+  "bootstrap_replicates": 50000,
+  "bootstrap_seed": 202611045,
+  "bootstrap_unit": "document; average the three matched generation-seed differences within each document before resampling; retain all conditions together",
+  "intervals": "pointwise 95% percentile bootstrap for every metric; Bonferroni nominal familywise 95% intervals across the declared 80-comparison family",
+  "policy_comparison": "random50 vs original evenly-spaced cross-half and both-half, paired on documents/seeds/delta, pointwise exploratory intervals",
+  "decoding_comparison": "change in each cache effect (condition-full) between nucleus256 or topk50 and original nucleus128; paired difference-in-differences, pointwise exploratory intervals",
+  "retention_curve": "all 100%,75%,50%,25% results and paired contrasts; no fitting or best-ratio selection",
+  "detection_threshold": "calibrate only on the corresponding full-cache group's 200 unwatermarked validation documents per seed; apply that common threshold within the group; also report measured FPR. Use original full threshold for retention and random-policy groups.",
+  "memory": "actual cache bytes at own final decoder step relative to full cache at the same step, not GPU peak-memory savings or controlled throughput; equal component retention is not equal total budget",
+  "limits": ["Same 500 independent test documents; seeds and decoding settings are repeated measures.", "NLI scores remain automatic source-support proxies.", "Random source policy has one fixed document-specific selection per document, not multiple independent policy seeds.", "Intervals spanning zero do not prove equivalence, no effect or exact additivity.", "No held-out independent-confirmation or universal cross-model claim."]
+}
