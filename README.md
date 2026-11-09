@@ -1,111 +1,109 @@
-# Watermark and KV-cache study
+# Watermark detection and source grounding under KV-cache compression
 
-Research code for sentence-level watermark diagnostics and source/history KV-cache ablations in BART summarization.
+A study of sentence-level watermark signals, decoding uncertainty, and source-memory compression in abstractive summarization.
 
-本仓库整理自董悦老师 Research Skill Test 的重建版实验代码。包含水印生成、句子对齐、NLI 评估、KV 缓存干预、统计分析及辅助审计程序；不包含简历、成绩单、邮件、服务凭据、新闻原文或实验原始输出。
+## Research question
 
-## Experiments
+Conditional text watermarking introduces a tension between detectability and fidelity to the input. A green-list bias changes which tokens the model samples, while summarization requires those tokens to remain consistent with the source document. Fu, Xiong, and Dong's work on conditional watermarking motivated our initial question: **at a fixed watermark strength, can local watermark scores identify sentences that have lost source support?**
 
-- **Local watermark diagnostics:** compare sampled-token and rendered-text watermark signals with windowed source-support scores; adjust sentence-level associations for entropy, length, position, overlap, and repetition.
-- **KV-cache interventions:** physically prune source cross-attention and generated-history self-attention caches separately; preserve absolute decoder positions and verify cache storage.
-- **Sensitivity analyses:** decoding regime, generation limit, retention ratio, and random source-position retention.
-- **Evaluation:** document-cluster paired analyses, blinded human-audit tooling, and optional API-judge tooling. API judgments are not human annotations.
+We first tested that diagnostic idea. After adjustment for sentence-level properties, the apparent association was close to zero. Examining this result shifted our attention to the generation distribution itself: the same watermark bias can have different effects depending on the probabilities assigned to candidate tokens. HalluKV's analysis of source-memory anchoring then suggested an intervention. If access to source memory is reduced, can watermark detection improve even as source support deteriorates?
 
-The implementation uses `facebook/bart-large-cnn`, CNN/DailyMail v3.0.0, and `cross-encoder/nli-deberta-v3-base`, with checkpoint/dataset revisions in the protocol files. This is an encoder-decoder cache-ablation study, not an implementation or reproduction of HalluKV.
+## Experimental setup
 
-## Repository layout
+| Component | Setting |
+| --- | --- |
+| Summarizer | `facebook/bart-large-cnn` |
+| Dataset | CNN/DailyMail v3.0.0 |
+| Calibration set | 200 validation documents |
+| Evaluation set | 500 disjoint test documents |
+| Generation seeds | 42, 43, 44 |
+| Maximum source length | 1,024 BART tokens |
+| Watermark | `simple_1` green-list scheme, green fraction $\gamma=0.25$ |
+| Bias sweep | $\delta \in \{0,1,2,4\}$ |
+| Decoding settings | Unrestricted sampling; nucleus $p=0.9$; top-$k=50$; nucleus sampling with a 256-step limit |
+| Source-support evaluator | `cross-encoder/nli-deberta-v3-base` |
 
-```text
-rebuild/
-  protocol.json             Base model/data/measurement protocol
-  prepare.py                Pinned asset download and integrity checks
-  study.py                  Generation, evaluation, analysis entry point
-  watermark.py              Green-list watermark and detector
-  generation.py             Cached sampling and runtime measurements
-  alignment.py              Generated-token to sentence alignment
-  evaluation.py             Windowed NLI and overlap metrics
-  analysis.py               Detection and association statistics
-  protocols/                Decoding/length sensitivity protocols
-  kvstudy/                  Source/self-attention cache interventions
-  execution/                KV worker and GPU scheduler dependencies
-  supplements/              Cache-sensitivity suite
-  postprocess/              Paired analysis and human-audit tools
-  ai_audit/                 Optional API-judge code and safe config examples
-  reference/                Upstream watermark implementation reference
-```
+Experiment 1 contains 33,600 generated summaries across four decoding settings. The cache experiments and their sensitivity settings contain another 84,000, for **117,600 generation records across calibration and test sets**. Repeated seeds and conditions share the same 500 independent test documents.
 
-## Environment
+Watermark detection is evaluated on rendered text re-tokenized by BART. Thresholds are calibrated using unwatermarked validation outputs at a target false-positive rate of 1%. Cache-policy comparisons use the matching full-cache threshold. Sentence-level analysis also retains the original sampled-token signal, aligned to sentence spans through byte-to-character offsets.
 
-The original GPU environment used Python 3.10, PyTorch 2.5.1 with CUDA 12.4, and Transformers 4.44.2. Generation and process-locking entry points target Linux with NVIDIA CUDA; Windows can be used for selected offline tests.
+For each summary sentence, NLI compares the sentence against overlapping windows of the model-visible source, using a 256-token window and a stride of 192 NLI tokens. The highest entailment probability across windows gives sentence support; the lowest sentence score in a summary gives its document-level support score. ROUGE-L and pre-watermark next-token entropy are recorded alongside these measurements.
 
-Install a CUDA-compatible PyTorch build for your machine first, in an isolated environment, then install the remaining dependencies:
+## Experiment 1: Can sentence-level watermark scores identify unsupported claims?
 
-```bash
-python3.10 -m venv .venv
-source .venv/bin/activate
-# Install the appropriate PyTorch 2.5.1 build separately.
-python -m pip install -r requirements.txt
-cd rebuild
-mkdir -p logs
-python prepare.py
-```
+The initial hypothesis was that a sentence with an unusually high local watermark $z$-score might be a sentence in which the green-list bias had displaced source-consistent choices. A useful association would allow the existing watermark signal to help identify unsupported claims without an additional verification-model pass.
 
-`prepare.py` downloads model assets. The dataset is loaded by the study runner unless a matching local cache exists. Downloads and model weights are not stored in Git. `rebuild/setup.sh` is the original server-specific setup script; review its Python path and package index before using it elsewhere.
+Under unrestricted sampling at $\delta=2$ and seed 42, the analysis included 2,063 sentences. The raw correlation between sampled-token watermark scores and NLI support was negative, as expected:
 
-## Run the base experiment
+| Association | Pearson / partial $r$ | Document-bootstrap 95% CI |
+| --- | ---: | --- |
+| Raw sentence-level association | $-0.138$ | |
+| Adjusted association | $-0.009$ | $[-0.048, +0.025]$ |
 
-```bash
-# From rebuild/, in the configured environment
-python -m unittest test_correctness -v
-python kvstudy/test_cache.py
-CUDA_VISIBLE_DEVICES=0 python -u study.py --mode smoke
-# Inspect smoke outputs before a full run
-CUDA_VISIBLE_DEVICES=0 python -u study.py --mode formal
-```
+The adjustment includes mean pre-watermark entropy, log unique-bigram count, relative sentence position, source trigram overlap, and bigram repetition. Confidence intervals for the adjusted association span zero across all four decoding settings.
 
-The base protocol selects 200 validation documents for calibration and 500 disjoint test documents. Four watermark strengths and three seeds give 8,400 generated summaries **including calibration and test**, not 8,400 independent test documents. Additional protocols reuse the original sample selection.
+The raw trend therefore did not provide the independent factuality signal we had hoped to obtain. Watermark scores also reflect the distribution from which tokens are sampled and the amount of evidence accumulated within a sentence. This led to a different test: hold the bias fixed and intervene on the model's access to source information.
 
-```bash
-# Example decoding supplement, after the base formal run
-# Review the frozen physical_gpu field before choosing the device.
-CUDA_VISIBLE_DEVICES=0 python -u study.py --mode smoke --protocol protocols/nucleus-128.json --run-name nucleus-128
-CUDA_VISIBLE_DEVICES=0 python -u study.py --mode formal --protocol protocols/nucleus-128.json --run-name nucleus-128
-```
+## Experiment 2: What changes when source memory is pruned?
 
-For KV ablations, see `rebuild/kvstudy/README.md`. For retention/decoding supplements, see `rebuild/supplements/README.md`. These stages depend on existing base-run manifests and samples. GPU numbers, admission checks, memory caps, and local interpreter paths in the orchestration scripts reflect the original server; review them before launching. Changing a frozen configuration requires a new run identity rather than resuming into old outputs.
+HalluKV's distinction between source-document memory and generated-history memory motivated separate interventions on BART's two cache compartments. After encoding the full source, we compared four policies:
 
-## Offline checks
+| Policy | Source cross-attention cache | Generated-history self-attention cache |
+| --- | --- | --- |
+| Full | 100% retained | 100% retained |
+| Self-half | 100% retained | 50% retained |
+| Cross-half | 50% retained | 100% retained |
+| Both-half | 50% retained | 50% retained |
 
-```bash
-cd rebuild
-python -m unittest test_correctness -v
-python kvstudy/test_cache.py
+Source-cache pruning gathers evenly spaced projected key/value positions in each cross-attention layer, preserves endpoints, and updates attention masks. History-cache pruning retains the decoder-start state and recent history while preserving the true absolute decoder position. Cache tensors are physically compacted, with checks on storage size and reuse. The 50% ratios apply within each compartment; they are not equal-total-memory-budget comparisons.
 
-# Optional API-judge tests use mocks, not real API calls.
-# Copy the sanitized examples locally first; keep the .invalid endpoints.
-cp ai_audit/protocol.example.json ai_audit/protocol.json
-cp ai_audit/scheduling_amendment.example.json ai_audit/scheduling_amendment.json
-cp ai_audit/terra_extension.example.json ai_audit/terra_extension.json
-python ai_audit/test_judge.py
-python ai_audit/test_panel_runner.py
-```
+### Main results
 
-Tests requiring real checkpoints, CUDA, or withheld audit items may be skipped when those assets are absent. `docs/UPLOAD_CHECKS.md` records what was actually checked before upload. No GPU experiment or paid API evaluation is launched by repository preparation.
+Nucleus sampling ($p=0.9$), $\delta=2$, 128-step generation limit; means over 500 test documents and three seeds.
 
-## Optional API audit
+| Cache policy | NLI support | ROUGE-L × 100 | Text watermark $z$ | Detection rate | Base entropy (nats) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Full | 0.1274 | 18.78 | 6.03 | 97.53% | 3.07 |
+| Self-half | 0.1218 | 17.22 | 5.86 | 96.13% | 3.20 |
+| Cross-half | 0.0813 | 15.72 | 6.68 | 99.00% | 3.58 |
+| Both-half | 0.0777 | 14.11 | 6.28 | 97.60% | 3.66 |
 
-`rebuild/ai_audit/*.example.json` are sanitized configuration templates. Service endpoints use `example.invalid`, dataset identities are placeholders, and no original user authorization or live capability evidence is included. The historical runners retain their preflight and frozen-manifest checks: they are not ready-to-run provider clients until you prepare your own items, configuration, capability checks, and authorization. Credentials must come from process environment variables. Never commit populated configuration files, response logs, or secrets.
+Removing half of the source cache reduced NLI support from 0.1274 to 0.0813, a **36.2% decrease**, while increasing text watermark $z$ by **0.6445** and detection by **1.47 percentage points**. The paired 95% intervals were $[-0.0562,-0.0361]$ for the NLI difference and $[+0.5103,+0.7783]$ for the watermark-score difference.
 
-Packaging adjustments in the audit tests use the placeholder endpoint and skip the frozen-item parity test if withheld items are absent. The scientific experiment implementation itself is unchanged.
+The history-cache control behaved differently. Its NLI difference from Full was $-0.0056$, with a 95% interval of $[-0.0161,+0.0048]$. Source-cache pruning thus produced a substantially larger loss of measured support than history-cache pruning in this setting.
 
-## Data and provenance
+### Sensitivity analyses
 
-- Obtain source datasets and checkpoints through their original distributions and comply with their terms.
-- Generated outputs, source articles, sampled audit items, and judgment logs are excluded. Reproduce them locally with the recorded protocols.
-- The parent directory's historical prototype and measurements are intentionally not included.
-- Existing inner READMEs describe the protocol at different development stages. In particular, the base README's original no-cache statement refers to the initial diagnostic experiment; cache interventions are in `kvstudy/` and `supplements/`. Its old three-page report-build note is historical; report/CV build assets are outside this code repository.
-- Scientific code files are copied from the local rebuilt project. Sanitized examples and this packaging do not replace the original frozen experiment archive.
+Each row compares source-cache pruning with the matching full-cache baseline at $\delta=2$. Paired contrasts average across seeds within each document; intervals use 50,000 document-cluster bootstrap resamples. Detection differences are in percentage points.
 
-## Third-party code
+| Setting | Change in NLI support [95% CI] | Change in text $z$ [95% CI] | Change in detection | Change in entropy (nats) |
+| --- | --- | --- | ---: | ---: |
+| 75% source retention | $-0.0153$ $[-0.0249,-0.0057]$ | $+0.260$ $[+0.135,+0.386]$ | +1.00 pp | +0.23 |
+| 25% source retention | $-0.0750$ $[-0.0853,-0.0649]$ | $+0.802$ $[+0.664,+0.940]$ | +1.87 pp | +0.93 |
+| Top-$k=50$, 50% retention | $-0.0777$ $[-0.0905,-0.0651]$ | $+0.702$ $[+0.602,+0.803]$ | +9.33 pp | +0.53 |
+| 256-step limit, 50% retention | $-0.0454$ $[-0.0554,-0.0355]$ | $+0.647$ $[+0.482,+0.812]$ | +1.07 pp | +0.50 |
+| Random source positions, 50% retention | $-0.0432$ $[-0.0533,-0.0334]$ | $+0.421$ $[+0.293,+0.548]$ | +1.67 pp | +0.43 |
 
-`rebuild/reference/watermark_processor.py` retains its upstream Apache-2.0 notice. The exact upstream commit and attribution are in `rebuild/reference/UPSTREAM.txt`; see `THIRD_PARTY_NOTICES.md`. No new license is assigned to the project's original code by this upload.
+Under top-$k=50$, full-cache detection starts at 84.40%, leaving more room for a change than the nucleus baseline. Pruning half of the source cache raises detection to **93.73%** while reducing NLI support by 0.0777. Extending the generation limit and replacing evenly spaced retention with random interior positions preserve the same direction of change.
+
+## Interpreting the entropy change
+
+At fixed $\delta=2$, source-cache pruning increases mean pre-watermark entropy from 3.07 to 3.58 nats. This accompanies lower source support and stronger watermark detection.
+
+For a base probability mass $p_G$ assigned to green-list tokens, adding a logit bias $\delta$ gives the following green-list mass before top-$k$ or top-$p$ filtering:
+
+$$
+p'_G = \frac{e^{\delta}p_G}{1+(e^{\delta}-1)p_G}.
+$$
+
+The response to a fixed bias depends on the underlying probability distribution. The observed entropy increase is consistent with source-memory loss changing how strongly the watermark affects sampling. Entropy alone does not determine $p_G$; the cache intervention directly tests the joint changes in source support, entropy, and detection.
+
+## Blinded sentence audit
+
+A three-LLM audit evaluates 260 sentences with experimental conditions hidden: 100 sentences from the initial watermark study and 160 from paired cache conditions. The panel produced 775 valid structured judgments out of 780 requests.
+
+Judges assign one of four labels: supported, contradicted, not-in-source, or unclear. This distinguishes interpretable factual errors from fragmented text that cannot be judged reliably. On interpretable sentences, NLI AUROC against the individual judges ranges from **0.753 to 0.910**. These are model-assisted judgments, reported separately from the automatic NLI measurements.
+
+## Conclusion
+
+The sentence-level experiment did not support using local watermark scores as an independent factuality diagnostic. The cache intervention established a different result: **source support and watermark detection can move in opposite directions at an unchanged watermark bias**. Under source-cache compression, a more detectable watermark can coexist with a less source-supported summary. Provenance detection and contextual faithfulness therefore need to be measured separately in this setting.
